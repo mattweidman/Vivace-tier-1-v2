@@ -1,41 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
 using vivace.Models;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace vivace.Controllers
 {
+
     [Route("api/[controller]")]
     public class UsersController : Controller
     {
         // counts how many users have been created
         private static int IdCounter = 0;
 
+        private static readonly string COLLECTION_NAME = "Users";
         private static readonly string DEFAULT_USERNAME = "username";
         private static readonly string USER_NOT_FOUND = "User ID not found";
         private static readonly string BAND_NOT_FOUND = "User not subscribed to band ID";
         private static readonly string EVENT_NOT_FOUND = "User not subscribed to event ID";
 
+        private ICosmosRepository CosmosRepo;
+
+        public UsersController(ICosmosRepository cr)
+        {
+            CosmosRepo = cr;
+        }
+
         // GET api/<controller>/5
         [HttpGet("{id}")]
-        public IActionResult Get(int id)
+        public async Task<IActionResult> Get(string id)
         {
-            if (id >= 0 && id < IdCounter)
+            Microsoft.Azure.Documents.Document doc = await CosmosRepo.GetFromDB(COLLECTION_NAME, id);
+            User user = (User)(dynamic)doc;
+
+            if (user == null)
             {
-                return Ok(new User
-                {
-                    Id = id.ToString(),
-                    Username = DEFAULT_USERNAME,
-                    Bands = new string[] { "1" },
-                    Events = new string[] { "2" }
-                });
+                return NotFound(USER_NOT_FOUND);
             }
 
-            return NotFound(USER_NOT_FOUND);
+            return Ok(user);
         }
 
         // POST api/<controller>

@@ -30,7 +30,7 @@ namespace vivace.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(string id)
         {
-            Microsoft.Azure.Documents.Document doc = await CosmosRepo.GetFromDB(COLLECTION_NAME, id);
+            Microsoft.Azure.Documents.Document doc = await CosmosRepo.GetDocument(COLLECTION_NAME, id);
             User user = (User)(dynamic)doc;
 
             if (user == null)
@@ -43,18 +43,17 @@ namespace vivace.Controllers
 
         // POST api/<controller>
         [HttpPost]
-        public IActionResult Post([FromBody]User user)
+        public async Task<IActionResult> Post([FromBody]User user)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            // save to database
-            user.Id = IdCounter.ToString();
-            IdCounter++;
-            
-            return Ok(user);
+            Microsoft.Azure.Documents.Document doc = await CosmosRepo.CreateDocument(COLLECTION_NAME, user);
+            User newUser = (User)(dynamic)doc;
+
+            return Created(doc.SelfLink, newUser);
         }
 
         // PUT api/<controller>/5/addband/5

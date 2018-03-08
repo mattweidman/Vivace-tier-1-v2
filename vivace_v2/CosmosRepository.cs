@@ -17,15 +17,8 @@ namespace vivace
         {
             client = new DocumentClient(new Uri(EndpointUrl), PrimaryKey);
         }
-
-        /// <summary>
-        /// Gets a document from a collection in the Vivace database.
-        /// Returns null if not found.
-        /// </summary>
-        /// <param name="collectionName">Name of collection</param>
-        /// <param name="id">ID of value looking for</param>
-        /// <returns></returns>
-        public async Task<Document> GetFromDB(string collectionName, string id)
+        
+        public async Task<Document> GetDocument(string collectionName, string id)
         {
             try
             {
@@ -38,6 +31,12 @@ namespace vivace
             {
                 return null;
             }
+        }
+
+        public async Task<Document> CreateDocument(string collectionName, object obj)
+        {
+            return await client.CreateDocumentAsync(
+                UriFactory.CreateDocumentCollectionUri(DBName, collectionName), obj);
         }
     }
 }

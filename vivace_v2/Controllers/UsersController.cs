@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using vivace.Models;
 
@@ -7,7 +9,7 @@ using vivace.Models;
 namespace vivace.Controllers
 {
 
-    [Route("api/[controller]")]
+    [Route("api/Users")]
     public class UsersController : Controller
     {
         // counts how many users have been created
@@ -24,6 +26,24 @@ namespace vivace.Controllers
         public UsersController(ICosmosRepository cr)
         {
             CosmosRepo = cr;
+        }
+
+        /// <summary>
+        /// Get hostname URL
+        /// </summary>
+        /// <returns></returns>
+        private string GetHost()
+        {
+            return Request.Host.ToString();
+        }
+
+        /// <summary>
+        /// Gets the URI of a get request for some id
+        /// </summary>
+        /// <returns></returns>
+        private string GetGetUri(string id)
+        {
+            return GetHost() + $"/api/Users/{id}";
         }
 
         // GET api/<controller>/5
@@ -53,33 +73,47 @@ namespace vivace.Controllers
             Microsoft.Azure.Documents.Document doc = await CosmosRepo.CreateDocument(COLLECTION_NAME, user);
             User newUser = (User)(dynamic)doc;
 
-            return Created(doc.SelfLink, newUser);
+            return Created(GetGetUri(newUser.Id), newUser);
         }
 
         // PUT api/<controller>/5/addband/5
         [HttpPut("{userid}/addband/{bandid}")]
-        public IActionResult AddBand(int userid, int bandid)
+        public async Task<IActionResult> AddBand(string userid, string bandid)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest();
             }
 
-            // check database if user exists
-            if (userid < 0 || userid >= IdCounter)
+            // get user from DB
+            Microsoft.Azure.Documents.Document doc = await CosmosRepo.GetDocument(COLLECTION_NAME, userid);
+            User user = (User)(dynamic)doc;
+
+            if (user == null)
             {
                 return NotFound(USER_NOT_FOUND);
             }
 
-            // add band to user entry in database
-
-            return Ok(new User
+            // check if band already exists in user's list
+            foreach (string otherBand in user.Bands)
             {
-                Id = userid.ToString(),
-                Username = DEFAULT_USERNAME,
-                Bands = new string[] { "1", bandid.ToString() },
-                Events = new string[] { "2" }
-            });
+                if (otherBand.Equals(bandid))
+                {
+                    return Ok(user);
+                }
+            }
+
+            // add bandid to user
+            List<string> bands = user.Bands.ToList();
+            bands.Add(bandid);
+            user.Bands = bands;
+
+            // update database
+            doc = await CosmosRepo.ReplaceDocument(COLLECTION_NAME, userid, user);
+            User newUser = (User)(dynamic)doc;
+
+            // return user
+            return Ok(newUser);
         }
 
         // PUT api/<controller>/5/leaveband/5

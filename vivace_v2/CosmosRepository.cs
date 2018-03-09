@@ -38,5 +38,11 @@ namespace vivace
             return await client.CreateDocumentAsync(
                 UriFactory.CreateDocumentCollectionUri(DBName, collectionName), obj);
         }
+
+        public async Task<Document> ReplaceDocument(string collectionName, string id, object obj)
+        {
+            return await client.ReplaceDocumentAsync(
+                UriFactory.CreateDocumentUri(DBName, collectionName, id), obj);
+        }
     }
 }

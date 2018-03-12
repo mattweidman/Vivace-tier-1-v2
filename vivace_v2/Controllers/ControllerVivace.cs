@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
+using vivace.Models;
 
 namespace vivace.Controllers
 {
@@ -7,7 +8,7 @@ namespace vivace.Controllers
     /// Superclass of controllers used in Vivace
     /// </summary>
     /// <typeparam name="T">Model type</typeparam>
-    public abstract class ControllerVivace<T> : ControllerBase
+    public abstract class ControllerVivace<T> : ControllerBase where T : ModelVivace
     {
         /// <summary>
         /// Name of this collection
@@ -75,6 +76,35 @@ namespace vivace.Controllers
             Microsoft.Azure.Documents.Document doc =
                 await CosmosRepo.ReplaceDocument(COLLECTION_NAME, id, replace);
             return (T)(dynamic)doc;
+        }
+
+        // GET api/<controller>/5
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(string id)
+        {
+            T doc = await GetDocFromDB(id);
+
+            if (doc == null)
+            {
+                return NotFound(ITEM_NOT_FOUND);
+            }
+
+            return Ok(doc);
+        }
+
+        // POST api/<controller>
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody]T docIn)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            Microsoft.Azure.Documents.Document doc = await CosmosRepo.CreateDocument(COLLECTION_NAME, docIn);
+            T newDoc = (T)(dynamic)doc;
+
+            return Created(GetGetUri(newDoc.Id), newDoc);
         }
     }
 }

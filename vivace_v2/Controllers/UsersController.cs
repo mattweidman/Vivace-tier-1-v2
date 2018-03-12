@@ -18,35 +18,6 @@ namespace vivace.Controllers
         public UsersController(ICosmosRepository cr) : base(cr)
         { }
 
-        // GET api/<controller>/5
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id)
-        {
-            User user = await GetDocFromDB(id);
-
-            if (user == null)
-            {
-                return NotFound(ITEM_NOT_FOUND);
-            }
-
-            return Ok(user);
-        }
-
-        // POST api/<controller>
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody]User user)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            Microsoft.Azure.Documents.Document doc = await CosmosRepo.CreateDocument(COLLECTION_NAME, user);
-            User newUser = (User)(dynamic)doc;
-
-            return Created(GetGetUri(newUser.Id), newUser);
-        }
-
         // PUT api/<controller>/5/addband/5
         [HttpPut("{userid}/addband/{bandid}")]
         public async Task<IActionResult> AddBand(string userid, string bandid)

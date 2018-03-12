@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Threading.Tasks;
 using vivace.Models;
 
@@ -105,6 +106,40 @@ namespace vivace.Controllers
             T newDoc = (T)(dynamic)doc;
 
             return Created(GetGetUri(newDoc.Id), newDoc);
+        }
+
+        /// <summary>
+        /// Gets a document by ID, changes it in some way, 
+        /// and replaces it in the database.
+        /// </summary>
+        /// <param name="id">Document ID</param>
+        /// <param name="op">Function that converts document into new 
+        /// document before replacing in database</param>
+        /// <returns>HTTP result: 500 if error, 404 if ID not found, 
+        /// else 200 with updated document</returns>
+        protected async Task<IActionResult> ChangeInDB(string id, Func<T, T> op)
+        {
+            // check model state first
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            // get user from DB
+            T docGot = await GetDocFromDB(id);
+
+            // return 404 if not found
+            if (docGot == null)
+            {
+                return NotFound(ITEM_NOT_FOUND);
+            }
+
+            // use function
+            T converted = op(docGot);
+
+            // update database
+            T result = await ReplaceDocInDB(id, converted);
+            return Ok(result);
         }
     }
 }

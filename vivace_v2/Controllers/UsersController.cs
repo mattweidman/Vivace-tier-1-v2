@@ -4,77 +4,29 @@ using System.Linq;
 using System.Threading.Tasks;
 using vivace.Models;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-
 namespace vivace.Controllers
 {
 
-    [Route("api/Users")]
-    public class UsersController : Controller
+    [Route("api/users")]
+    public class UsersController : ControllerVivace<User>
     {
 
-        private static readonly string COLLECTION_NAME = "Users";
-        private static readonly string USER_NOT_FOUND = "User ID not found";
+        protected override string COLLECTION_NAME { get { return "Users"; } }
 
-        private ICosmosRepository CosmosRepo;
+        protected override string ITEM_NOT_FOUND { get { return "User ID not found"; } }
 
-        public UsersController(ICosmosRepository cr)
-        {
-            CosmosRepo = cr;
-        }
-
-        /// <summary>
-        /// Get hostname URL
-        /// </summary>
-        /// <returns></returns>
-        private string GetHost()
-        {
-            return Request.Host.ToString();
-        }
-
-        /// <summary>
-        /// Gets the URI of a get request for some id
-        /// </summary>
-        /// <returns></returns>
-        private string GetGetUri(string id)
-        {
-            return GetHost() + $"/api/Users/{id}";
-        }
-
-        /// <summary>
-        /// Calls Cosmos to get a user by ID
-        /// </summary>
-        /// <param name="id">User ID</param>
-        /// <returns></returns>
-        private async Task<User> GetUserFromDB(string id)
-        {
-            Microsoft.Azure.Documents.Document doc = 
-                await CosmosRepo.GetDocument(COLLECTION_NAME, id);
-            return (User)(dynamic)doc;
-        }
-
-        /// <summary>
-        /// Call Cosmos to replace a user by ID
-        /// </summary>
-        /// <param name="id">User ID</param>
-        /// <param name="user">object to replace with</param>
-        /// <returns></returns>
-        private async Task<User> ReplaceUserInDB(string id, User user)
-        {
-            Microsoft.Azure.Documents.Document doc =
-                await CosmosRepo.ReplaceDocument(COLLECTION_NAME, id, user);
-            return (User)(dynamic)doc;
-        }
+        public UsersController(ICosmosRepository cr) : base(cr)
+        { }
 
         // GET api/<controller>/5
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(string id)
         {
-            User user = await GetUserFromDB(id);
+            User user = await GetDocFromDB(id);
 
             if (user == null)
             {
-                return NotFound(USER_NOT_FOUND);
+                return NotFound(ITEM_NOT_FOUND);
             }
 
             return Ok(user);
@@ -105,11 +57,11 @@ namespace vivace.Controllers
             }
 
             // get user from DB
-            User user = await GetUserFromDB(userid);
+            User user = await GetDocFromDB(userid);
 
             if (user == null)
             {
-                return NotFound(USER_NOT_FOUND);
+                return NotFound(ITEM_NOT_FOUND);
             }
 
             // check if band already exists in user's list
@@ -124,7 +76,7 @@ namespace vivace.Controllers
             user.Bands = bands;
 
             // update database
-            User newUser = await ReplaceUserInDB(userid, user);
+            User newUser = await ReplaceDocInDB(userid, user);
 
             // return user
             return Ok(newUser);
@@ -140,11 +92,11 @@ namespace vivace.Controllers
             }
 
             // get user from DB
-            User user = await GetUserFromDB(userid);
+            User user = await GetDocFromDB(userid);
 
             if (user == null)
             {
-                return NotFound(USER_NOT_FOUND);
+                return NotFound(ITEM_NOT_FOUND);
             }
 
             // remove band from list
@@ -153,7 +105,7 @@ namespace vivace.Controllers
             user.Bands = bands;
 
             // update database
-            User newUser = await ReplaceUserInDB(userid, user);
+            User newUser = await ReplaceDocInDB(userid, user);
             return Ok(newUser);
         }
 
@@ -167,11 +119,11 @@ namespace vivace.Controllers
             }
 
             // get user from DB
-            User user = await GetUserFromDB(userid);
+            User user = await GetDocFromDB(userid);
 
             if (user == null)
             {
-                return NotFound(USER_NOT_FOUND);
+                return NotFound(ITEM_NOT_FOUND);
             }
 
             // check if event already exists in user's list
@@ -186,7 +138,7 @@ namespace vivace.Controllers
             user.Events = events;
 
             // update database
-            User newUser = await ReplaceUserInDB(userid, user);
+            User newUser = await ReplaceDocInDB(userid, user);
 
             // return user
             return Ok(newUser);
@@ -202,11 +154,11 @@ namespace vivace.Controllers
             }
 
             // get user from DB
-            User user = await GetUserFromDB(userid);
+            User user = await GetDocFromDB(userid);
 
             if (user == null)
             {
-                return NotFound(USER_NOT_FOUND);
+                return NotFound(ITEM_NOT_FOUND);
             }
 
             // remove event from list
@@ -215,7 +167,7 @@ namespace vivace.Controllers
             user.Events = events;
 
             // update database
-            User newUser = await ReplaceUserInDB(userid, user);
+            User newUser = await ReplaceDocInDB(userid, user);
             return Ok(newUser);
         }
     }

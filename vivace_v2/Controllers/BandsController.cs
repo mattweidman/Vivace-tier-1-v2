@@ -6,7 +6,7 @@ using vivace.Models;
 
 namespace vivace.Controllers
 {
-    [Route("api/bands")]
+    [Route("api/[controller]")]
     public class BandsController : ControllerVivace<Band>
     {
         protected override string COLLECTION_NAME { get { return "Bands"; } }

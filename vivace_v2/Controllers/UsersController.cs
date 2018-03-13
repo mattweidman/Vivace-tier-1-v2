@@ -6,8 +6,7 @@ using vivace.Models;
 
 namespace vivace.Controllers
 {
-
-    [Route("api/users")]
+    [Route("api/[controller]")]
     public class UsersController : ControllerVivace<User>
     {
 

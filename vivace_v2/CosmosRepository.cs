@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
@@ -31,6 +32,20 @@ namespace vivace
             {
                 return null;
             }
+        }
+
+        public async Task<Document> QueryDocument(string collectionName, string sqlQuerySpec)
+        {
+            return await Task.Run(() =>
+            {
+                IQueryable<dynamic> results = client.CreateDocumentQuery(
+                    UriFactory.CreateDocumentCollectionUri(DBName, collectionName), sqlQuerySpec);
+                foreach (dynamic d in results)
+                {
+                    return d;
+                }
+                return null;
+            });
         }
 
         public async Task<Document> CreateDocument(string collectionName, object obj)

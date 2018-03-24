@@ -30,5 +30,13 @@ namespace vivace
         /// <param name="obj">C# object to store as JSON document</param>
         /// <returns></returns>
         Task<Document> ReplaceDocument(string collectionName, string id, object obj);
+
+        /// <summary>
+        /// Makes a query for a document using a SQL query. Null if not found.
+        /// </summary>
+        /// <param name="collectionName">Name of colelction</param>
+        /// <param name="sqlQuerySpec">SQL query</param>
+        /// <returns></returns>
+        Task<Document> QueryDocument(string collectionName, string sqlQuerySpec);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using vivace.Models;
 
@@ -14,8 +15,46 @@ namespace vivace.Controllers
 
         protected override string ITEM_NOT_FOUND { get { return "User ID not found"; } }
 
+        protected string USERNAME_NOT_FOUND { get { return "Username not found"; } }
+
+        protected string INVALID_USERNAME { get {
+                return "Username may only contain alphanumeric characters and underscores."; } }
+
         public UsersController(ICosmosRepository cr) : base(cr)
         { }
+
+        /// <summary>
+        /// Makes sure username only contains alphanumeric characters or underscores.
+        /// </summary>
+        /// <param name="username">possible username</param>
+        /// <returns>whether username is valid</returns>
+        protected bool IsValidUsername(string username)
+        {
+            Regex r = new Regex("[^a-zA-Z0-9_]");
+            return r.Match(username).Success;
+        }
+
+        // GET api/<controller>/username/<username>
+        [HttpGet("username/{username}")]
+        public async Task<IActionResult> GetUserByName(string username)
+        {
+            // username must be all alphanumeric characters or underscores
+            if (IsValidUsername(username))
+            {
+                return BadRequest(INVALID_USERNAME);
+            }
+
+            // SQL query
+            Microsoft.Azure.Documents.Document doc = await CosmosRepo.QueryDocument(COLLECTION_NAME, 
+                $"SELECT * FROM Users u WHERE u.username='{username}'");
+
+            if (doc == null)
+            {
+                return NotFound(USERNAME_NOT_FOUND);
+            }
+
+            return Ok((User)(dynamic)doc);
+        }
 
         // PUT api/<controller>/5/addband/5
         [HttpPut("{userid}/addband/{bandid}")]

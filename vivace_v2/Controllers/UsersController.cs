@@ -13,8 +13,6 @@ namespace vivace.Controllers
 
         public override string COLLECTION_NAME { get { return "Users"; } }
 
-        protected override string ITEM_NOT_FOUND { get { return NotFoundMessage("User ID"); } }
-
         protected string USERNAME_NOT_FOUND { get { return NotFoundMessage("Username"); } }
 
         protected string INVALID_USERNAME { get {
@@ -128,14 +126,22 @@ namespace vivace.Controllers
         [HttpPut("{userid}/leaveband/{bandid}")]
         public async Task<IActionResult> LeaveBand(string userid, string bandid)
         {
-            return await ChangeInDB(userid, user =>
-            {
-                // remove band from list if it exists
-                List<string> bands = user.Bands.ToList();
-                bands.Remove(bandid);
-                user.Bands = bands;
-                return user;
-            });
+            return await ChangeTwoDBs<Band>(userid, bandid, (new BandsController(CosmosRepo)).COLLECTION_NAME,
+                user =>
+                {
+                    List<string> bands = user.Bands.ToList();
+                    bands.Remove(bandid);
+                    user.Bands = bands;
+                    return user;
+                },
+                band =>
+                {
+                    List<string> users = band.Users.ToList();
+                    users.Remove(userid);
+                    band.Users = users;
+                    return band;
+                }
+            );
         }
 
         // PUT api/<controller>/5/addevent/5
@@ -170,14 +176,22 @@ namespace vivace.Controllers
         [HttpPut("{userid}/leaveevent/{eventid}")]
         public async Task<IActionResult> LeaveEvent(string userid, string eventid)
         {
-            return await ChangeInDB(userid, user =>
-            {
-                // remove event from list if it exists
-                List<string> events = user.Events.ToList();
-                events.Remove(eventid);
-                user.Events = events;
-                return user;
-            });
+            return await ChangeTwoDBs<Event>(userid, eventid, (new EventsController(CosmosRepo)).COLLECTION_NAME,
+                user =>
+                {
+                    List<string> events = user.Events.ToList();
+                    events.Remove(eventid);
+                    user.Events = events;
+                    return user;
+                },
+                event_ =>
+                {
+                    List<string> users = event_.Users.ToList();
+                    users.Remove(userid);
+                    event_.Users = users;
+                    return event_;
+                }
+            );
         }
     }
 }

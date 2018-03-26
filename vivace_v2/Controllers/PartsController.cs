@@ -11,8 +11,6 @@ namespace vivace.Controllers
     {
         public override string COLLECTION_NAME { get { return "Parts"; } }
 
-        protected override string ITEM_NOT_FOUND { get { return "Part ID not found"; } }
-
         public PartsController(ICosmosRepository cr) : base(cr)
         { }
 

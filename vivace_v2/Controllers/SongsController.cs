@@ -13,8 +13,6 @@ namespace vivace.Controllers
     {
         public override string COLLECTION_NAME { get { return "Songs"; } }
 
-        protected override string ITEM_NOT_FOUND { get { return "Song ID not found"; } }
-
         public SongsController(ICosmosRepository cr) : base(cr)
         { }
 

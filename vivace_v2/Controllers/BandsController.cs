@@ -11,8 +11,6 @@ namespace vivace.Controllers
     {
         public override string COLLECTION_NAME { get { return "Bands"; } }
 
-        protected override string ITEM_NOT_FOUND { get { return "Band ID not found"; } }
-
         public BandsController(ICosmosRepository cr) : base(cr)
         { }
 

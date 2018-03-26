@@ -13,8 +13,6 @@ namespace vivace.Controllers
     {
         public override string COLLECTION_NAME { get { return "Events"; } }
 
-        protected override string ITEM_NOT_FOUND { get { return "Event ID not found"; } }
-
         public EventsController(ICosmosRepository cr) : base(cr)
         { }
 

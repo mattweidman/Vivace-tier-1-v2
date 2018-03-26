@@ -17,11 +17,6 @@ namespace vivace.Controllers
         public abstract string COLLECTION_NAME { get; }
 
         /// <summary>
-        /// What to output in a 404 when ID of document not found
-        /// </summary>
-        protected abstract string ITEM_NOT_FOUND { get; }
-
-        /// <summary>
         /// Collection of methods used to interract with Cosmos;
         /// used for dependency injection.
         /// </summary>
@@ -107,7 +102,7 @@ namespace vivace.Controllers
         /// <returns></returns>
         protected IActionResult ItemNotFoundResult(string id)
         {
-            return NotFound("ID " + id + " not found in " + COLLECTION_NAME);
+            return ItemNotFoundResult(id, COLLECTION_NAME);
         }
 
         // GET api/<controller>/5
@@ -198,7 +193,7 @@ namespace vivace.Controllers
             // check if item exists
             if (item == null)
             {
-                return ItemNotFoundResult(id);
+                return ItemNotFoundResult(itemId);
             }
 
             // get other
@@ -207,7 +202,7 @@ namespace vivace.Controllers
             // check if other exists
             if (other == null)
             {
-                return NotFound("ID " + otherId + " not found in " + otherCollection);
+                return ItemNotFoundResult(otherId, otherCollection);
             }
 
             // modify item

@@ -28,6 +28,15 @@ namespace vivace.Controllers
                 return MissingPropertyResult("song");
             }
 
+            // make sure song exists
+            string songsCollection = (new SongsController(CosmosRepo)).COLLECTION_NAME;
+            string songId = docIn.Song;
+            Song song = (Song)(dynamic)(await CosmosRepo.GetDocument(songsCollection, songId));
+            if (song == null)
+            {
+                return ItemNotFoundResult(songId, songsCollection);
+            }
+
             return await base.Post(docIn);
         }
 

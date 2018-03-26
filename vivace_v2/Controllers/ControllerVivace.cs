@@ -14,7 +14,7 @@ namespace vivace.Controllers
         /// <summary>
         /// Name of this collection
         /// </summary>
-        protected abstract string COLLECTION_NAME { get; }
+        public abstract string COLLECTION_NAME { get; }
 
         /// <summary>
         /// What to output in a 404 when ID of document not found
@@ -79,6 +79,37 @@ namespace vivace.Controllers
             return (T)(dynamic)doc;
         }
 
+        /// <summary>
+        /// Response returned when request does not contain a required property
+        /// </summary>
+        /// <param name="props">string listing missing property</param>
+        /// <returns></returns>
+        protected IActionResult MissingPropertyResult(string props)
+        {
+            return BadRequest("Property required: " + props);
+        }
+
+        /// <summary>
+        /// Result returned when an item is not found.
+        /// </summary>
+        /// <param name="id">ID not found</param>
+        /// <param name="collName">Collection searched in</param>
+        /// <returns></returns>
+        protected IActionResult ItemNotFoundResult(string id, string collName)
+        {
+            return NotFound("ID " + id + " not found in " + collName);
+        }
+
+        /// <summary>
+        /// Result returned when an item is not found in this collection.
+        /// </summary>
+        /// <param name="id">ID not found</param>
+        /// <returns></returns>
+        protected IActionResult ItemNotFoundResult(string id)
+        {
+            return NotFound("ID " + id + " not found in " + COLLECTION_NAME);
+        }
+
         // GET api/<controller>/5
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(string id)
@@ -87,7 +118,7 @@ namespace vivace.Controllers
 
             if (doc == null)
             {
-                return NotFound(ITEM_NOT_FOUND);
+                return ItemNotFoundResult(id);
             }
 
             return Ok(doc);
@@ -95,7 +126,7 @@ namespace vivace.Controllers
 
         // POST api/<controller>
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody]T docIn)
+        public virtual async Task<IActionResult> Post([FromBody]T docIn)
         {
             if (!ModelState.IsValid)
             {
@@ -125,13 +156,13 @@ namespace vivace.Controllers
                 return BadRequest();
             }
 
-            // get user from DB
+            // get item from DB
             T docGot = await GetDocFromDB(id);
 
             // return 404 if not found
             if (docGot == null)
             {
-                return NotFound(ITEM_NOT_FOUND);
+                return ItemNotFoundResult(id);
             }
 
             // use function
@@ -140,6 +171,54 @@ namespace vivace.Controllers
             // update database
             T result = await ReplaceDocInDB(id, converted);
             return Ok(result);
+        }
+
+        /// <summary>
+        /// Gets documents of type T and U, changes them in some way,
+        /// and replaces them in the database.
+        /// </summary>
+        /// <typeparam name="U">type of other document</typeparam>
+        /// <param name="itemId">ID of type T document</param>
+        /// <param name="otherId">ID of type U document</param>
+        /// <param name="otherCollection">name of U collection</param>
+        /// <param name="itemOp">operation on type T document</param>
+        /// <param name="otherOp">operation on type U document </param>
+        /// <returns></returns>
+        protected async Task<IActionResult> ChangeTwoDBs<U>(string itemId, string otherId, 
+            string otherCollection, Func<T, T> itemOp, Func<U, U> otherOp)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            // get item
+            T item = await GetDocFromDB(itemId);
+
+            // check if item exists
+            if (item == null)
+            {
+                return ItemNotFoundResult(id);
+            }
+
+            // get other
+            U other = (U)(dynamic)(await CosmosRepo.GetDocument(otherCollection, otherId));
+
+            // check if other exists
+            if (other == null)
+            {
+                return NotFound("ID " + otherId + " not found in " + otherCollection);
+            }
+
+            // modify item
+            T newItem = itemOp(item);
+
+            // modify other
+            U newOther = otherOp(other);
+
+            // update in database
+            await CosmosRepo.ReplaceDocument(otherCollection, otherId, newOther);
+            return Ok(await ReplaceDocInDB(itemId, newItem));
         }
     }
 }

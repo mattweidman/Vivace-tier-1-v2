@@ -9,21 +9,39 @@ namespace vivace.Controllers
     [Route("api/[controller]")]
     public class PartsController : ControllerVivace<Part>
     {
-        protected override string COLLECTION_NAME { get { return "Parts"; } }
+        public override string COLLECTION_NAME { get { return "Parts"; } }
 
         protected override string ITEM_NOT_FOUND { get { return "Part ID not found"; } }
 
         public PartsController(ICosmosRepository cr) : base(cr)
         { }
 
+        // POST api/<controller>
+        [HttpPost]
+        public override async Task<IActionResult> Post([FromBody]Part docIn)
+        {
+            // make sure required fields are included
+            if (docIn.Instrument == null)
+            {
+                return MissingPropertyResult("instrument");
+            }
+            if (docIn.Song == null)
+            {
+                return MissingPropertyResult("song");
+            }
+
+            return await base.Post(docIn);
+        }
+
         // PUT api/<controller>/5/rename
         [HttpPut("{partid}/rename")]
         public async Task<IActionResult> Rename(string partid, [FromBody]Part replacement)
         {
-            // The user is supposed to put something like
-            // { "instrument": "trombone" } in the body.
-            // If the user gives any other properties besides instrument,
-            // they will be ignored. 
+            // make sure required fields are included
+            if (replacement.Instrument == null)
+            {
+                return MissingPropertyResult("instrument");
+            }
 
             return await ChangeInDB(partid, part =>
             {

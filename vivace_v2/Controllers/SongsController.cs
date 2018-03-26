@@ -11,12 +11,31 @@ namespace vivace.Controllers
     [Route("api/[controller]")]
     public class SongsController : ControllerVivace<Song>
     {
-        protected override string COLLECTION_NAME { get { return "Songs"; } }
+        public override string COLLECTION_NAME { get { return "Songs"; } }
 
         protected override string ITEM_NOT_FOUND { get { return "Song ID not found"; } }
 
         public SongsController(ICosmosRepository cr) : base(cr)
         { }
+
+        // POST api/<controller>
+        [HttpPost]
+        public override async Task<IActionResult> Post([FromBody]Song docIn)
+        {
+            // make sure a name is included
+            if (docIn.Name == null)
+            {
+                return MissingPropertyResult("name");
+            }
+
+            // convert null parts into an empty list
+            if (docIn.Parts == null)
+            {
+                docIn.Parts = new List<string>();
+            }
+
+            return await base.Post(docIn);
+        }
 
         // PUT api/<controller>/5/addpart/5
         [HttpPut("{songid}/addpart/{partid}")]
@@ -53,10 +72,10 @@ namespace vivace.Controllers
         [HttpPut("{songid}/rename")]
         public async Task<IActionResult> Rename(string songid, [FromBody]Song replacement)
         {
-            // The user is supposed to put something like
-            // { "name": "songname" } in the body.
-            // If the user gives any other properties besides name,
-            // they will be ignored. 
+            if (replacement.Name == null)
+            {
+                return MissingPropertyResult("name");
+            }
 
             return await ChangeInDB(songid, song =>
             {

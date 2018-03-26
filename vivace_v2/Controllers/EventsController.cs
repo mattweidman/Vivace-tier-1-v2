@@ -16,10 +16,37 @@ namespace vivace.Controllers
         public EventsController(ICosmosRepository cr) : base(cr)
         { }
 
+        /// <summary>
+        /// Message returned when song not found in band.
+        /// </summary>
+        /// <param name="songId">song ID</param>
+        /// <param name="bandId">band ID</param>
+        /// <returns></returns>
+        protected string SongNotInBandMessage(string songId, string bandId)
+        {
+            return "Song " + songId + " not found in band " + bandId;
+        }
+
+        /// <summary>
+        /// Sends an HTTP request to get the band for this event
+        /// </summary>
+        /// <param name="bandId">Band ID</param>
+        /// <returns></returns>
+        protected async Task<Band> GetBand(string bandId)
+        {
+            string bandCollection = (new BandsController(CosmosRepo)).COLLECTION_NAME;
+            return (Band)(dynamic)(await CosmosRepo.GetDocument(bandCollection, bandId));
+        }
+
         // POST api/<controller>
         [HttpPost]
         public override async Task<IActionResult> Post([FromBody]Event docIn)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
             // check required properties
             if (docIn.Name == null)
             {
@@ -38,25 +65,80 @@ namespace vivace.Controllers
             docIn.Users = new List<string>();
             docIn.CurrentSong = null;
 
-            return await base.Post(docIn);
+            // get band
+            string bandCollection = (new BandsController(CosmosRepo)).COLLECTION_NAME;
+            string bandId = docIn.Band;
+            Band band = await GetBand(bandId);
+
+            // check band exists
+            if (band == null)
+            {
+                return ItemNotFoundResult(bandId, bandCollection);
+            }
+
+            // check that all songs are used are in the band
+            foreach (string songId in docIn.Songs)
+            {
+                if (!band.Songs.Contains(songId))
+                {
+                    return NotFound(SongNotInBandMessage(songId, bandId));
+                }
+            }
+            
+            // create event
+            Microsoft.Azure.Documents.Document doc = await CosmosRepo.CreateDocument(COLLECTION_NAME, docIn);
+            Event newEvent = (Event)(dynamic)doc;
+            string eventId = newEvent.Id;
+
+            // update band
+            if (!band.Events.Contains(eventId))
+            {
+                List<string> events = band.Events.ToList();
+                events.Add(eventId);
+                band.Events = events;
+                await CosmosRepo.ReplaceDocument(bandCollection, bandId, band);
+            }
+
+            return Created(GetGetUri(eventId), newEvent);
         }
 
         // PUT api/<controller>/5/addsong/5
         [HttpPut("{eventid}/addsong/{songid}")]
         public async Task<IActionResult> AddSong(string eventid, string songid)
         {
-            return await ChangeInDB(eventid, event_ =>
+            // check model state first
+            if (!ModelState.IsValid)
             {
-                List<string> songs = event_.Songs.ToList();
+                return BadRequest();
+            }
 
-                if (!songs.Contains(songid))
-                {
-                    songs.Add(songid);
-                    event_.Songs = songs;
-                }
+            // get item from DB
+            Event event_ = await GetDocFromDB(eventid);
 
-                return event_;
-            });
+            // return 404 if not found
+            if (event_ == null)
+            {
+                return ItemNotFoundResult(eventid);
+            }
+
+            // check that songid is in band
+            Band band = await GetBand(event_.Band);
+            if (!band.Songs.Contains(songid))
+            {
+                return NotFound(SongNotInBandMessage(songid, band.Id));
+            }
+
+            // update
+            List<string> songs = event_.Songs.ToList();
+            if (!songs.Contains(songid))
+            {
+                songs.Add(songid);
+                event_.Songs = songs;
+            }
+
+            // update database
+            Event result = await ReplaceDocInDB(eventid, event_);
+            return Ok(result);
         }
 
         // PUT api/<controller>/5/deletesong/5

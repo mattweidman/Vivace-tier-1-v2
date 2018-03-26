@@ -34,6 +34,15 @@ namespace vivace.Controllers
         [HttpPut("{bandid}/addsong/{songid}")]
         public async Task<IActionResult> AddSong(string bandid, string songid)
         {
+            // check that song exists
+            string otherCollection = (new SongsController(CosmosRepo)).COLLECTION_NAME;
+            Song song = (Song)(dynamic)(await CosmosRepo.GetDocument(otherCollection, songid));
+
+            if (song == null)
+            {
+                return ItemNotFoundResult(songid, otherCollection);
+            }
+
             return await ChangeInDB(bandid, band =>
             {
                 List<string> songs = band.Songs.ToList();

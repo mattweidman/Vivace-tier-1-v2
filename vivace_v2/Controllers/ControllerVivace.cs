@@ -215,5 +215,57 @@ namespace vivace.Controllers
             await CosmosRepo.ReplaceDocument(otherCollection, otherId, newOther);
             return Ok(await ReplaceDocInDB(itemId, newItem));
         }
+
+        /// <summary>
+        /// Gets documents of type T and U, does some check on U, 
+        /// and if U passes, changes T in some way and replaces T in the database.
+        /// </summary>
+        /// <typeparam name="U">type of other document</typeparam>
+        /// <param name="itemId">ID of document to replace</param>
+        /// <param name="getOtherId">way of getting ID of other document, given the item</param>
+        /// <param name="otherCollection">collection to find other document in</param>
+        /// <param name="itemOp">operation on item if check passes</param>
+        /// <param name="check">should return true if other document passes check, else false</param>
+        /// <param name="failResult">message returned if check fails</param>
+        /// <returns></returns>
+        protected async Task<IActionResult> CheckAndChangeInDB<U>(string itemId, Func<T, string> getOtherId,
+            string otherCollection, Func<U, Boolean> check, Func<T, T> itemOp, IActionResult failResult)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            // get item
+            T item = await GetDocFromDB(itemId);
+
+            // check if item exists
+            if (item == null)
+            {
+                return ItemNotFoundResult(itemId);
+            }
+
+            // get other
+            string otherId = getOtherId(item);
+            U other = (U)(dynamic)(await CosmosRepo.GetDocument(otherCollection, otherId));
+
+            // check if other exists
+            if (other == null)
+            {
+                return ItemNotFoundResult(otherId, otherCollection);
+            }
+
+            // do check on other
+            if (!check(other))
+            {
+                return failResult;
+            }
+
+            // modify item
+            T newItem = itemOp(item);
+
+            // update in database
+            return Ok(await ReplaceDocInDB(itemId, newItem));
+        }
     }
 }

@@ -20,11 +20,10 @@ namespace vivace.Controllers
         /// Message returned when song not found in band.
         /// </summary>
         /// <param name="songId">song ID</param>
-        /// <param name="bandId">band ID</param>
         /// <returns></returns>
-        protected string SongNotInBandMessage(string songId, string bandId)
+        protected string SongNotInBandMessage(string songId)
         {
-            return "Song " + songId + " not found in band " + bandId;
+            return "Song " + songId + " not found in band";
         }
 
         /// <summary>
@@ -81,7 +80,7 @@ namespace vivace.Controllers
             {
                 if (!band.Songs.Contains(songId))
                 {
-                    return NotFound(SongNotInBandMessage(songId, bandId));
+                    return NotFound(SongNotInBandMessage(songId));
                 }
             }
             
@@ -106,39 +105,22 @@ namespace vivace.Controllers
         [HttpPut("{eventid}/addsong/{songid}")]
         public async Task<IActionResult> AddSong(string eventid, string songid)
         {
-            // check model state first
-            if (!ModelState.IsValid)
-            {
-                return BadRequest();
-            }
-
-            // get item from DB
-            Event event_ = await GetDocFromDB(eventid);
-
-            // return 404 if not found
-            if (event_ == null)
-            {
-                return ItemNotFoundResult(eventid);
-            }
-
-            // check that songid is in band
-            Band band = await GetBand(event_.Band);
-            if (!band.Songs.Contains(songid))
-            {
-                return NotFound(SongNotInBandMessage(songid, band.Id));
-            }
-
-            // update
-            List<string> songs = event_.Songs.ToList();
-            if (!songs.Contains(songid))
-            {
-                songs.Add(songid);
-                event_.Songs = songs;
-            }
-
-            // update database
-            Event result = await ReplaceDocInDB(eventid, event_);
-            return Ok(result);
+            return await CheckAndChangeInDB<Band>(eventid, 
+                event_ => event_.Band,
+                (new BandsController(CosmosRepo)).COLLECTION_NAME,
+                band => band.Songs.Contains(songid),
+                event_ =>
+                {
+                    List<string> songs = event_.Songs.ToList();
+                    if (!songs.Contains(songid))
+                    {
+                        songs.Add(songid);
+                        event_.Songs = songs;
+                    }
+                    return event_;
+                },
+                NotFound(SongNotInBandMessage(songid))
+            );
         }
 
         // PUT api/<controller>/5/deletesong/5
@@ -179,11 +161,18 @@ namespace vivace.Controllers
                 return MissingPropertyResult("currentsong");
             }
 
-            return await ChangeInDB(eventid, event_ =>
-            {
-                event_.CurrentSong = replacement.CurrentSong;
-                return event_;
-            });
+            string songId = replacement.CurrentSong;
+            return await CheckAndChangeInDB<Band>(eventid,
+                event_ => event_.Band,
+                (new BandsController(CosmosRepo)).COLLECTION_NAME,
+                band => band.Songs.Contains(songId),
+                event_ =>
+                {
+                    event_.CurrentSong = songId;
+                    return event_;
+                },
+                NotFound(SongNotInBandMessage(songId))
+            );
         }
 
     }

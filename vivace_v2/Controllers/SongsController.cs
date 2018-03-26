@@ -39,18 +39,25 @@ namespace vivace.Controllers
         [HttpPut("{songid}/addpart/{partid}")]
         public async Task<IActionResult> AddPart(string songid, string partid)
         {
-            return await ChangeInDB(songid, song =>
-            {
-                List<string> parts = song.Parts.ToList();
-
-                if (!parts.Contains(partid))
+            string partsCollection = (new PartsController(CosmosRepo)).COLLECTION_NAME;
+            return await CheckAndChangeInDB<Part>(songid, 
+                _ => partid,
+                partsCollection,
+                part => part != null,
+                song =>
                 {
-                    parts.Add(partid);
-                    song.Parts = parts;
-                }
+                    List<string> parts = song.Parts.ToList();
 
-                return song;
-            });
+                    if (!parts.Contains(partid))
+                    {
+                        parts.Add(partid);
+                        song.Parts = parts;
+                    }
+
+                    return song;
+                },
+                ItemNotFoundResult(partid, partsCollection)
+            );
         }
 
         // PUT api/<controller>/5/deletepart/5

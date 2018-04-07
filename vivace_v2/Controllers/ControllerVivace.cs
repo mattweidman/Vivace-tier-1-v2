@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Documents;
 using System;
 using System.Threading.Tasks;
 using vivace.Models;
@@ -105,14 +106,15 @@ namespace vivace.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(string id)
         {
-            T doc = await GetDocFromDB(id);
-
-            if (doc == null)
+            try
+            {
+                T doc = await GetDocFromDB(id);
+                return Ok(doc);
+            }
+            catch (DocumentClientException)
             {
                 return ItemNotFoundResult(id);
             }
-
-            return Ok(doc);
         }
 
         // POST api/<controller>
@@ -161,14 +163,19 @@ namespace vivace.Controllers
             }
 
             // get other document
-            U other = await CosmosRepo.GetDocument<U>(otherCollection, otherId);
-            if (other == null)
+            U other;
+            try
+            {
+                other = await CosmosRepo.GetDocument<U>(otherCollection, otherId);
+            }
+            catch (DocumentClientException)
             {
                 return ItemNotFoundResult(otherId, otherCollection);
             }
 
             // change other document
             U newOther = changeOther(other);
+            await CosmosRepo.ReplaceDocument(otherCollection, otherId, newOther);
 
             // create this document
             T newDoc = await CosmosRepo.CreateDocument(CollectionName, docIn);
@@ -194,10 +201,14 @@ namespace vivace.Controllers
             }
 
             // get item from DB
-            T docGot = await GetDocFromDB(id);
+            T docGot;
+            try
+            {
+                docGot = await GetDocFromDB(id);
+            }
 
             // return 404 if not found
-            if (docGot == null)
+            catch (DocumentClientException)
             {
                 return ItemNotFoundResult(id);
             }
@@ -239,10 +250,14 @@ namespace vivace.Controllers
             }
 
             // get other
-            U other = await CosmosRepo.GetDocument<U>(otherCollection, otherId);
+            U other;
+            try
+            {
+                other = await CosmosRepo.GetDocument<U>(otherCollection, otherId);
+            }
 
             // check if other exists
-            if (other == null)
+            catch (DocumentClientException)
             {
                 return ItemNotFoundResult(otherId, otherCollection);
             }
@@ -279,10 +294,14 @@ namespace vivace.Controllers
             }
 
             // get item
-            T item = await GetDocFromDB(itemId);
+            T item;
+            try
+            {
+                item = await GetDocFromDB(itemId);
+            }
 
             // check if item exists
-            if (item == null)
+            catch (DocumentClientException)
             {
                 return ItemNotFoundResult(itemId);
             }

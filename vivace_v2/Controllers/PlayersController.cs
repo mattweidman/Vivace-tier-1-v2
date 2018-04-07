@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Documents;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -57,12 +58,13 @@ namespace vivace.Controllers
             }
 
             // make sure username does not already exist
-            Player doc = await CosmosRepo.QueryDocument<Player>(CollectionName,
-                $"SELECT * FROM Users u WHERE u.username='{username}'");
-            if (doc != null)
+            try
             {
+                Player doc = await CosmosRepo.QueryDocument<Player>(CollectionName,
+                    $"SELECT * FROM Users u WHERE u.username='{username}'");
                 return BadRequest(USERNAME_EXISTS);
             }
+            catch (DocumentClientException) { }
 
             // set list fields to empty lists
             docIn.Bands = new List<string>();

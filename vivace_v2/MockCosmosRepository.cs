@@ -42,7 +42,12 @@ namespace vivace
         public Task<T> GetDocument<T>(string collectionName, string id)
         {
             Dictionary<string, object> collection = mockDatabase[collectionName];
-            return Task.FromResult((T)collection[id]);
+            if (collection.ContainsKey(id))
+            {
+                return Task.FromResult((T)collection[id]);
+            }
+
+            throw new DocumentQueryException("ID " + id + " not found in " + collectionName);
         }
 
         /// <summary>

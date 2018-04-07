@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Documents;
 using vivace.Models;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -41,6 +42,11 @@ namespace vivace.Controllers
         [HttpPost]
         public override async Task<IActionResult> Post([FromBody]Event docIn)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             // check required properties
             if (docIn.Name == null)
             {
@@ -56,6 +62,23 @@ namespace vivace.Controllers
             docIn.Users = new List<string>();
             docIn.CurrentSong = null;
 
+            // get band if it exists
+            string bandId = docIn.Band;
+            string bandCollection = CollectionNames.BANDS;
+            Band band = null;
+            try
+            {
+                band = await CosmosRepo.GetDocument<Band>(bandCollection, bandId);
+            }
+            catch (DocumentClientException)
+            {
+                return NotFound(ItemNotFoundResult(bandId, bandCollection));
+            }
+
+            // create event
+            Event created = await CosmosRepo.CreateDocument(CollectionName, docIn);
+            string eventId = created.Id;
+
             // update band
             if (!band.Events.Contains(eventId))
             {
@@ -65,7 +88,7 @@ namespace vivace.Controllers
                 await CosmosRepo.ReplaceDocument(bandCollection, bandId, band);
             }
 
-            return Created(GetGetUri(eventId), newEvent);
+            return Created(GetGetUri(eventId), created);
         }
 
         // PUT api/<controller>/5/addsong/5

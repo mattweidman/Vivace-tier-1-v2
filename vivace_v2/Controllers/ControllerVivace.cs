@@ -241,10 +241,14 @@ namespace vivace.Controllers
             }
 
             // get item
-            T item = await GetDocFromDB(itemId);
+            T item;
+            try
+            {
+                item = await GetDocFromDB(itemId);
+            }
 
             // check if item exists
-            if (item == null)
+            catch (DocumentClientException)
             {
                 return ItemNotFoundResult(itemId);
             }

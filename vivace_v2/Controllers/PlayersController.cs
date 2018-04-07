@@ -84,10 +84,13 @@ namespace vivace.Controllers
             }
 
             // SQL query
-            Player doc = await CosmosRepo.QueryDocument<Player>(CollectionName, 
-                $"SELECT * FROM Players u WHERE u.username='{username}'");
-
-            if (doc == null)
+            Player doc;
+            try
+            {
+                doc = await CosmosRepo.QueryDocument<Player>(CollectionName,
+                    $"SELECT * FROM Players u WHERE u.username='{username}'");
+            }
+            catch (DocumentClientException)
             {
                 return NotFound(USERNAME_NOT_FOUND);
             }

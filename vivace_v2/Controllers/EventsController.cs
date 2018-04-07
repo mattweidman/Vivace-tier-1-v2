@@ -27,17 +27,6 @@ namespace vivace.Controllers
             return "Song " + songId + " not found in band";
         }
 
-        /// <summary>
-        /// Sends an HTTP request to get the band for this event
-        /// </summary>
-        /// <param name="bandId">Band ID</param>
-        /// <returns></returns>
-        protected async Task<Band> GetBand(string bandId)
-        {
-            string bandCollection = CollectionNames.BANDS;
-            return await CosmosRepo.GetDocument<Band>(bandCollection, bandId);
-        }
-
         // POST api/<controller>
         [HttpPost]
         public override async Task<IActionResult> Post([FromBody]Event docIn)
@@ -72,7 +61,7 @@ namespace vivace.Controllers
             }
             catch (DocumentClientException)
             {
-                return NotFound(ItemNotFoundResult(bandId, bandCollection));
+                return ItemNotFoundResult(bandId, bandCollection);
             }
 
             // create event

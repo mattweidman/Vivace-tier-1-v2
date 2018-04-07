@@ -39,7 +39,7 @@ namespace vivace.Controllers
         [HttpPut("{songid}/addpart/{partid}")]
         public async Task<IActionResult> AddPart(string songid, string partid)
         {
-            string partsCollection = CollectionNames.PARTS;
+            string partsCollection = (new PartsController(CosmosRepo)).CollectionName;
             return await CheckAndChangeInDB<Part>(songid, 
                 _ => partid,
                 partsCollection,

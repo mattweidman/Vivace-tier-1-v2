@@ -1,5 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Documents;
 using vivace.Models;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -31,13 +34,30 @@ namespace vivace.Controllers
             // make sure song exists
             string songsCollection = CollectionNames.SONGS;
             string songId = docIn.Song;
-            Song song = await CosmosRepo.GetDocument<Song>(songsCollection, songId);
-            if (song == null)
+            Song song;
+            try
+            {
+                song = await CosmosRepo.GetDocument<Song>(songsCollection, songId);
+            }
+            catch (DocumentClientException)
             {
                 return ItemNotFoundResult(songId, songsCollection);
             }
 
-            return await base.Post(docIn);
+            // create part
+            Part newDoc = await CosmosRepo.CreateDocument(CollectionName, docIn);
+            string partId = newDoc.Id;
+
+            // update song
+            if (!song.Parts.Contains(partId))
+            {
+                List<string> parts = song.Parts.ToList();
+                parts.Add(partId);
+                song.Parts = parts;
+                await CosmosRepo.ReplaceDocument(songsCollection, songId, song);
+            }
+
+            return Created(GetGetUri(newDoc.Id), newDoc);
         }
 
         // PUT api/<controller>/5/rename

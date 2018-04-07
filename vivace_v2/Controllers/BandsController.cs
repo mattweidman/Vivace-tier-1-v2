@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Documents;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,9 +37,12 @@ namespace vivace.Controllers
         {
             // check that song exists
             string otherCollection = CollectionNames.SONGS;
-            Song song = await CosmosRepo.GetDocument<Song>(otherCollection, songid);
-
-            if (song == null)
+            Song song;
+            try
+            {
+                song = await CosmosRepo.GetDocument<Song>(otherCollection, songid);
+            }
+            catch (DocumentClientException)
             {
                 return ItemNotFoundResult(songid, otherCollection);
             }

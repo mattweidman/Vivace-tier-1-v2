@@ -9,34 +9,42 @@ namespace vivace
         /// Gets a document from a collection in the database.
         /// Returns null if not found.
         /// </summary>
+        /// <typeparam name="T">Type of document to get</typeparam>
         /// <param name="collectionName">Name of collection</param>
         /// <param name="id">ID of value looking for</param>
+        /// <exception cref="DocumentClientException"></exception>
         /// <returns></returns>
-        Task<Document> GetDocument(string collectionName, string id);
+        Task<T> GetDocument<T>(string collectionName, string id);
 
         /// <summary>
         /// Create a new document in the database.
         /// </summary>
+        /// <typeparam name="T">Type of document to create</typeparam>
         /// <param name="collectionName">Name of collection</param>
         /// <param name="obj">C# object to store as a JSON document</param>
+        /// <exception cref="DocumentClientException"></exception>
         /// <returns></returns>
-        Task<Document> CreateDocument(string collectionName, object obj);
+        Task<T> CreateDocument<T>(string collectionName, T obj);
 
         /// <summary>
         /// Replace a document in the database.
         /// </summary>
+        /// <typeparam name="T">Type of document to replace</typeparam>
         /// <param name="collectionName">Name of collection</param>
         /// <param name="id">ID of document to replace</param>
         /// <param name="obj">C# object to store as JSON document</param>
+        /// <exception cref="DocumentClientException"></exception>
         /// <returns></returns>
-        Task<Document> ReplaceDocument(string collectionName, string id, object obj);
+        Task<T> ReplaceDocument<T>(string collectionName, string id, T obj);
 
         /// <summary>
         /// Makes a query for a document using a SQL query. Null if not found.
         /// </summary>
-        /// <param name="collectionName">Name of colelction</param>
+        /// <typeparam name="T">Type of document to get</typeparam>
+        /// <param name="collectionName">Name of collection</param>
         /// <param name="sqlQuerySpec">SQL query</param>
+        /// <exception cref="DocumentClientException"></exception>
         /// <returns></returns>
-        Task<Document> QueryDocument(string collectionName, string sqlQuerySpec);
+        Task<T> QueryDocument<T>(string collectionName, string sqlQuerySpec);
     }
 }

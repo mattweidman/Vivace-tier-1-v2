@@ -11,7 +11,7 @@ namespace vivace.Controllers
     [Route("api/[controller]")]
     public class SongsController : ControllerVivace<Song>
     {
-        public override string COLLECTION_NAME { get { return "Songs"; } }
+        public override string CollectionName { get { return CollectionNames.SONGS; } }
 
         public SongsController(ICosmosRepository cr) : base(cr)
         { }
@@ -39,7 +39,7 @@ namespace vivace.Controllers
         [HttpPut("{songid}/addpart/{partid}")]
         public async Task<IActionResult> AddPart(string songid, string partid)
         {
-            string partsCollection = (new PartsController(CosmosRepo)).COLLECTION_NAME;
+            string partsCollection = CollectionNames.PARTS;
             return await CheckAndChangeInDB<Part>(songid, 
                 _ => partid,
                 partsCollection,

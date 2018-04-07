@@ -11,7 +11,7 @@ namespace vivace.Controllers
     [Route("api/[controller]")]
     public class EventsController : ControllerVivace<Event>
     {
-        public override string COLLECTION_NAME { get { return "Events"; } }
+        public override string CollectionName { get { return CollectionNames.EVENTS; } }
 
         public EventsController(ICosmosRepository cr) : base(cr)
         { }
@@ -33,19 +33,14 @@ namespace vivace.Controllers
         /// <returns></returns>
         protected async Task<Band> GetBand(string bandId)
         {
-            string bandCollection = (new BandsController(CosmosRepo)).COLLECTION_NAME;
-            return (Band)(dynamic)(await CosmosRepo.GetDocument(bandCollection, bandId));
+            string bandCollection = CollectionNames.BANDS;
+            return await CosmosRepo.GetDocument<Band>(bandCollection, bandId);
         }
 
         // POST api/<controller>
         [HttpPost]
         public override async Task<IActionResult> Post([FromBody]Event docIn)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest();
-            }
-
             // check required properties
             if (docIn.Name == null)
             {
@@ -57,37 +52,9 @@ namespace vivace.Controllers
             }
 
             // remove unused properties
-            if (docIn.Songs == null)
-            {
-                docIn.Songs = new List<string>();
-            }
+            docIn.Songs = new List<string>();
             docIn.Users = new List<string>();
             docIn.CurrentSong = null;
-
-            // get band
-            string bandCollection = (new BandsController(CosmosRepo)).COLLECTION_NAME;
-            string bandId = docIn.Band;
-            Band band = await GetBand(bandId);
-
-            // check band exists
-            if (band == null)
-            {
-                return ItemNotFoundResult(bandId, bandCollection);
-            }
-
-            // check that all songs are used are in the band
-            foreach (string songId in docIn.Songs)
-            {
-                if (!band.Songs.Contains(songId))
-                {
-                    return NotFound(SongNotInBandMessage(songId));
-                }
-            }
-            
-            // create event
-            Microsoft.Azure.Documents.Document doc = await CosmosRepo.CreateDocument(COLLECTION_NAME, docIn);
-            Event newEvent = (Event)(dynamic)doc;
-            string eventId = newEvent.Id;
 
             // update band
             if (!band.Events.Contains(eventId))
@@ -107,7 +74,7 @@ namespace vivace.Controllers
         {
             return await CheckAndChangeInDB<Band>(eventid, 
                 event_ => event_.Band,
-                (new BandsController(CosmosRepo)).COLLECTION_NAME,
+                CollectionNames.BANDS,
                 band => band.Songs.Contains(songid),
                 event_ =>
                 {
@@ -164,7 +131,7 @@ namespace vivace.Controllers
             string songId = replacement.CurrentSong;
             return await CheckAndChangeInDB<Band>(eventid,
                 event_ => event_.Band,
-                (new BandsController(CosmosRepo)).COLLECTION_NAME,
+                CollectionNames.BANDS,
                 band => band.Songs.Contains(songId),
                 event_ =>
                 {

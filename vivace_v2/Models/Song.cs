@@ -1,14 +1,16 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace vivace.Models
 {
+    [DataContract]
     public class Song : ModelVivace
     {
-        [JsonProperty(PropertyName = "name")]
+        [DataMember, JsonProperty(PropertyName = "name")]
         public string Name { get; set; }
 
-        [JsonProperty(PropertyName = "parts")]
+        [DataMember, JsonProperty(PropertyName = "parts")]
         public IEnumerable<string> Parts { get; set; }
     }
 }

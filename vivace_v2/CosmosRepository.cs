@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
+using Microsoft.Azure.Documents.Linq;
 
 namespace vivace
 {
@@ -19,22 +20,15 @@ namespace vivace
             client = new DocumentClient(new Uri(EndpointUrl), PrimaryKey);
         }
         
-        public async Task<Document> GetDocument(string collectionName, string id)
+        public async Task<T> GetDocument<T>(string collectionName, string id)
         {
-            try
-            {
-                Document result = await client.ReadDocumentAsync(
-                    UriFactory.CreateDocumentUri(DBName, collectionName, id));
+            Document result = await client.ReadDocumentAsync(
+                UriFactory.CreateDocumentUri(DBName, collectionName, id));
 
-                return result;
-            }
-            catch (DocumentClientException)
-            {
-                return null;
-            }
+            return (dynamic)result;
         }
 
-        public async Task<Document> QueryDocument(string collectionName, string sqlQuerySpec)
+        public async Task<T> QueryDocument<T>(string collectionName, string sqlQuerySpec)
         {
             return await Task.Run(() =>
             {
@@ -44,20 +38,20 @@ namespace vivace
                 {
                     return d;
                 }
-                return null;
+                throw new DocumentQueryException("SQL query found nothing in " + collectionName);
             });
         }
 
-        public async Task<Document> CreateDocument(string collectionName, object obj)
+        public async Task<T> CreateDocument<T>(string collectionName, T obj)
         {
-            return await client.CreateDocumentAsync(
-                UriFactory.CreateDocumentCollectionUri(DBName, collectionName), obj);
+            return (dynamic)(await client.CreateDocumentAsync(
+                UriFactory.CreateDocumentCollectionUri(DBName, collectionName), obj));
         }
 
-        public async Task<Document> ReplaceDocument(string collectionName, string id, object obj)
+        public async Task<T> ReplaceDocument<T>(string collectionName, string id, T obj)
         {
-            return await client.ReplaceDocumentAsync(
-                UriFactory.CreateDocumentUri(DBName, collectionName, id), obj);
+            return (dynamic)(await client.ReplaceDocumentAsync(
+                UriFactory.CreateDocumentUri(DBName, collectionName, id), obj));
         }
     }
 }

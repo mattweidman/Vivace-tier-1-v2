@@ -1,13 +1,15 @@
 ﻿using Newtonsoft.Json;
+using System.Runtime.Serialization;
 
 namespace vivace.Models
 {
     /// <summary>
     /// Superclass of models in Vivace
     /// </summary>
-    public class ModelVivace
+    [DataContract]
+    public abstract class ModelVivace
     {
-        [JsonProperty(PropertyName = "id")]
+        [DataMember, JsonProperty(PropertyName = "id")]
         public string Id { get; set; }
     }
 }

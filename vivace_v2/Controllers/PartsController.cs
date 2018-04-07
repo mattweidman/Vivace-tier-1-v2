@@ -9,7 +9,7 @@ namespace vivace.Controllers
     [Route("api/[controller]")]
     public class PartsController : ControllerVivace<Part>
     {
-        public override string COLLECTION_NAME { get { return "Parts"; } }
+        public override string CollectionName { get { return CollectionNames.PARTS; } }
 
         public PartsController(ICosmosRepository cr) : base(cr)
         { }
@@ -29,9 +29,9 @@ namespace vivace.Controllers
             }
 
             // make sure song exists
-            string songsCollection = (new SongsController(CosmosRepo)).COLLECTION_NAME;
+            string songsCollection = CollectionNames.SONGS;
             string songId = docIn.Song;
-            Song song = (Song)(dynamic)(await CosmosRepo.GetDocument(songsCollection, songId));
+            Song song = await CosmosRepo.GetDocument<Song>(songsCollection, songId);
             if (song == null)
             {
                 return ItemNotFoundResult(songId, songsCollection);

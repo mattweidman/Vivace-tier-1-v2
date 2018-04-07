@@ -8,10 +8,9 @@ using vivace.Models;
 namespace vivace.Controllers
 {
     [Route("api/[controller]")]
-    public class UsersController : ControllerVivace<User>
+    public class PlayersController : ControllerVivace<Player>
     {
-
-        public override string COLLECTION_NAME { get { return "Users"; } }
+        public override string CollectionName { get { return CollectionNames.PLAYERS; } }
 
         protected string USERNAME_NOT_FOUND { get { return NotFoundMessage("Username"); } }
 
@@ -20,7 +19,7 @@ namespace vivace.Controllers
 
         protected string USERNAME_EXISTS { get { return "Username already exists."; } }
 
-        public UsersController(ICosmosRepository cr) : base(cr)
+        public PlayersController(ICosmosRepository cr) : base(cr)
         { }
 
         private string NotFoundMessage(string prop)
@@ -41,7 +40,7 @@ namespace vivace.Controllers
 
         // POST api/<controller>
         [HttpPost]
-        public override async Task<IActionResult> Post([FromBody]User docIn)
+        public override async Task<IActionResult> Post([FromBody]Player docIn)
         {
             string username = docIn.Username;
 
@@ -58,7 +57,7 @@ namespace vivace.Controllers
             }
 
             // make sure username does not already exist
-            Microsoft.Azure.Documents.Document doc = await CosmosRepo.QueryDocument(COLLECTION_NAME,
+            Player doc = await CosmosRepo.QueryDocument<Player>(CollectionName,
                 $"SELECT * FROM Users u WHERE u.username='{username}'");
             if (doc != null)
             {
@@ -83,22 +82,22 @@ namespace vivace.Controllers
             }
 
             // SQL query
-            Microsoft.Azure.Documents.Document doc = await CosmosRepo.QueryDocument(COLLECTION_NAME, 
-                $"SELECT * FROM Users u WHERE u.username='{username}'");
+            Player doc = await CosmosRepo.QueryDocument<Player>(CollectionName, 
+                $"SELECT * FROM Players u WHERE u.username='{username}'");
 
             if (doc == null)
             {
                 return NotFound(USERNAME_NOT_FOUND);
             }
 
-            return Ok((User)(dynamic)doc);
+            return Ok(doc);
         }
 
         // PUT api/<controller>/5/addband/5
         [HttpPut("{userid}/addband/{bandid}")]
         public async Task<IActionResult> AddBand(string userid, string bandid)
         {
-            return await ChangeTwoDBs<Band>(userid, bandid, (new BandsController(CosmosRepo)).COLLECTION_NAME,
+            return await ChangeTwoDBs<Band>(userid, bandid, CollectionNames.BANDS,
                 user =>
                 {
                     if (!user.Bands.Contains(bandid))
@@ -126,7 +125,7 @@ namespace vivace.Controllers
         [HttpPut("{userid}/leaveband/{bandid}")]
         public async Task<IActionResult> LeaveBand(string userid, string bandid)
         {
-            return await ChangeTwoDBs<Band>(userid, bandid, (new BandsController(CosmosRepo)).COLLECTION_NAME,
+            return await ChangeTwoDBs<Band>(userid, bandid, CollectionNames.BANDS,
                 user =>
                 {
                     List<string> bands = user.Bands.ToList();
@@ -148,7 +147,7 @@ namespace vivace.Controllers
         [HttpPut("{userid}/addevent/{eventid}")]
         public async Task<IActionResult> AddEvent(string userid, string eventid)
         {
-            return await ChangeTwoDBs<Event>(userid, eventid, (new EventsController(CosmosRepo)).COLLECTION_NAME,
+            return await ChangeTwoDBs<Event>(userid, eventid, CollectionNames.EVENTS,
                 user =>
                 {
                     if (!user.Events.Contains(eventid))
@@ -176,7 +175,7 @@ namespace vivace.Controllers
         [HttpPut("{userid}/leaveevent/{eventid}")]
         public async Task<IActionResult> LeaveEvent(string userid, string eventid)
         {
-            return await ChangeTwoDBs<Event>(userid, eventid, (new EventsController(CosmosRepo)).COLLECTION_NAME,
+            return await ChangeTwoDBs<Event>(userid, eventid, CollectionNames.EVENTS,
                 user =>
                 {
                     List<string> events = user.Events.ToList();

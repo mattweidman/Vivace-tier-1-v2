@@ -14,7 +14,7 @@ namespace vivace.Controllers
         /// <summary>
         /// Name of this collection
         /// </summary>
-        public abstract string COLLECTION_NAME { get; }
+        public abstract string CollectionName { get; }
 
         /// <summary>
         /// Collection of methods used to interract with Cosmos;
@@ -46,7 +46,7 @@ namespace vivace.Controllers
         /// <returns></returns>
         protected string GetGetUri(string id)
         {
-            return GetHost() + $"/api/{COLLECTION_NAME}/{id}";
+            return GetHost() + $"/api/{CollectionName}/{id}";
         }
 
         /// <summary>
@@ -56,9 +56,7 @@ namespace vivace.Controllers
         /// <returns></returns>
         protected async Task<T> GetDocFromDB(string id)
         {
-            Microsoft.Azure.Documents.Document doc =
-                await CosmosRepo.GetDocument(COLLECTION_NAME, id);
-            return (T)(dynamic)doc;
+            return await CosmosRepo.GetDocument<T>(CollectionName, id);
         }
 
         /// <summary>
@@ -69,9 +67,7 @@ namespace vivace.Controllers
         /// <returns></returns>
         protected async Task<T> ReplaceDocInDB(string id, T replace)
         {
-            Microsoft.Azure.Documents.Document doc =
-                await CosmosRepo.ReplaceDocument(COLLECTION_NAME, id, replace);
-            return (T)(dynamic)doc;
+            return await CosmosRepo.ReplaceDocument<T>(CollectionName, id, replace);
         }
 
         /// <summary>
@@ -102,7 +98,7 @@ namespace vivace.Controllers
         /// <returns></returns>
         protected IActionResult ItemNotFoundResult(string id)
         {
-            return ItemNotFoundResult(id, COLLECTION_NAME);
+            return ItemNotFoundResult(id, CollectionName);
         }
 
         // GET api/<controller>/5
@@ -128,8 +124,54 @@ namespace vivace.Controllers
                 return BadRequest(ModelState);
             }
 
-            Microsoft.Azure.Documents.Document doc = await CosmosRepo.CreateDocument(COLLECTION_NAME, docIn);
-            T newDoc = (T)(dynamic)doc;
+            T newDoc = await CosmosRepo.CreateDocument(CollectionName, docIn);
+
+            return Created(GetGetUri(newDoc.Id), newDoc);
+        }
+
+        /// <summary>
+        /// Receive a POST request to create a new document, and update other documents
+        /// in the process.
+        /// </summary>
+        /// <typeparam name="U">type of other document to change</typeparam>
+        /// <param name="docIn">document to create</param>
+        /// <param name="getOtherId">way of getting ID of other document, given the input document</param>
+        /// <param name="otherCollection">collection to find other document in</param>
+        /// <param name="changeOther">how to change other document before updating database</param>
+        /// <param name="missingProperty">name of property, used in missing property errors.
+        /// if null, will be set to otherCollection</param>
+        /// <returns></returns>
+        protected async Task<IActionResult> PostAndChangeOther<U>([FromBody]T docIn, Func<T, string> getOtherId,
+            string otherCollection, Func<U, U> changeOther, string missingProperty=null)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            // get other ID
+            string otherId = getOtherId(docIn);
+            if (otherId == null)
+            {
+                if (missingProperty == null)
+                {
+                    missingProperty = otherCollection;
+                }
+                return MissingPropertyResult(otherCollection);
+            }
+
+            // get other document
+            U other = await CosmosRepo.GetDocument<U>(otherCollection, otherId);
+            if (other == null)
+            {
+                return ItemNotFoundResult(otherId, otherCollection);
+            }
+
+            // change other document
+            U newOther = changeOther(other);
+
+            // create this document
+            T newDoc = await CosmosRepo.CreateDocument(CollectionName, docIn);
 
             return Created(GetGetUri(newDoc.Id), newDoc);
         }
@@ -197,7 +239,7 @@ namespace vivace.Controllers
             }
 
             // get other
-            U other = (U)(dynamic)(await CosmosRepo.GetDocument(otherCollection, otherId));
+            U other = await CosmosRepo.GetDocument<U>(otherCollection, otherId);
 
             // check if other exists
             if (other == null)
@@ -247,7 +289,7 @@ namespace vivace.Controllers
 
             // get other
             string otherId = getOtherId(item);
-            U other = (U)(dynamic)(await CosmosRepo.GetDocument(otherCollection, otherId));
+            U other = await CosmosRepo.GetDocument<U>(otherCollection, otherId);
 
             // check if other exists
             if (other == null)

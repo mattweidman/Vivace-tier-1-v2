@@ -132,58 +132,6 @@ namespace vivace.Controllers
         }
 
         /// <summary>
-        /// Receive a POST request to create a new document, and update other documents
-        /// in the process.
-        /// </summary>
-        /// <typeparam name="U">type of other document to change</typeparam>
-        /// <param name="docIn">document to create</param>
-        /// <param name="getOtherId">way of getting ID of other document, given the input document</param>
-        /// <param name="otherCollection">collection to find other document in</param>
-        /// <param name="changeOther">how to change other document before updating database</param>
-        /// <param name="missingProperty">name of property, used in missing property errors.
-        /// if null, will be set to otherCollection</param>
-        /// <returns></returns>
-        protected async Task<IActionResult> PostAndChangeOther<U>([FromBody]T docIn, Func<T, string> getOtherId,
-            string otherCollection, Func<U, U> changeOther, string missingProperty=null)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest();
-            }
-
-            // get other ID
-            string otherId = getOtherId(docIn);
-            if (otherId == null)
-            {
-                if (missingProperty == null)
-                {
-                    missingProperty = otherCollection;
-                }
-                return MissingPropertyResult(otherCollection);
-            }
-
-            // get other document
-            U other;
-            try
-            {
-                other = await CosmosRepo.GetDocument<U>(otherCollection, otherId);
-            }
-            catch (DocumentClientException)
-            {
-                return ItemNotFoundResult(otherId, otherCollection);
-            }
-
-            // change other document
-            U newOther = changeOther(other);
-            await CosmosRepo.ReplaceDocument(otherCollection, otherId, newOther);
-
-            // create this document
-            T newDoc = await CosmosRepo.CreateDocument(CollectionName, docIn);
-
-            return Created(GetGetUri(newDoc.Id), newDoc);
-        }
-
-        /// <summary>
         /// Gets a document by ID, changes it in some way, 
         /// and replaces it in the database.
         /// </summary>
@@ -312,10 +260,14 @@ namespace vivace.Controllers
 
             // get other
             string otherId = getOtherId(item);
-            U other = await CosmosRepo.GetDocument<U>(otherCollection, otherId);
+            U other;
+            try
+            {
+                other = await CosmosRepo.GetDocument<U>(otherCollection, otherId);
+            }
 
             // check if other exists
-            if (other == null)
+            catch (DocumentClientException)
             {
                 return ItemNotFoundResult(otherId, otherCollection);
             }

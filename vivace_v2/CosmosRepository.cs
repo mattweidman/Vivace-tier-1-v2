@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.Documents.Linq;
@@ -9,14 +10,21 @@ namespace vivace
 {
     public class CosmosRepository : ICosmosRepository
     {
-        private const string EndpointUrl = "https://vivace.documents.azure.com:443/";
-        private const string PrimaryKey = "1PpmE7ZwUDg03JQN17KGaQyxInfsHKSaurgV4vaIDgXRFpH1QOXaVZaTJhvImilMSSE3jMiuWB95PDjuxw4yTA==";
-        private const string DBName = "Vivace";
+        private const string XmlPath = "access.xml";
+        private string EndpointUrl;
+        private string PrimaryKey;
+        private string DBName;
 
         private DocumentClient client;
 
         public CosmosRepository ()
         {
+            XmlDocument xml = new XmlDocument();
+            xml.Load(XmlPath);
+            EndpointUrl = xml.SelectSingleNode("/dbinfo/endpointurl").InnerText;
+            PrimaryKey = xml.SelectSingleNode("/dbinfo/primarykey").InnerText;
+            DBName = xml.SelectSingleNode("/dbinfo/dbname").InnerText;
+
             client = new DocumentClient(new Uri(EndpointUrl), PrimaryKey);
         }
         
@@ -30,27 +38,36 @@ namespace vivace
 
         public async Task<T> QueryDocument<T>(string collectionName, string sqlQuerySpec)
         {
-            return await Task.Run(() =>
+            T docFound = default(T);
+            bool notFound = false;
+            await Task.Run(() =>
             {
                 IQueryable<dynamic> results = client.CreateDocumentQuery(
                     UriFactory.CreateDocumentCollectionUri(DBName, collectionName), sqlQuerySpec);
                 foreach (dynamic d in results)
                 {
-                    return d;
+                    docFound = d;
+                    return;
                 }
-                throw new DocumentQueryException("SQL query found nothing in " + collectionName);
+                notFound = true;
             });
+
+            if (notFound)
+            {
+                throw new DocumentQueryException("SQL query found nothing in " + collectionName);
+            }
+            return docFound;
         }
 
         public async Task<T> CreateDocument<T>(string collectionName, T obj)
         {
-            return (dynamic)(await client.CreateDocumentAsync(
+            return (dynamic)(Document)(await client.CreateDocumentAsync(
                 UriFactory.CreateDocumentCollectionUri(DBName, collectionName), obj));
         }
 
         public async Task<T> ReplaceDocument<T>(string collectionName, string id, T obj)
         {
-            return (dynamic)(await client.ReplaceDocumentAsync(
+            return (dynamic)(Document)(await client.ReplaceDocumentAsync(
                 UriFactory.CreateDocumentUri(DBName, collectionName, id), obj));
         }
     }
